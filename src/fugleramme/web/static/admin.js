@@ -29,6 +29,13 @@ if (state && was && was !== cfg.version) {
   state.textContent = (i18n.updated || ("updated to v" + cfg.version));
 }
 
+const langSel = document.getElementById("admin-lang");
+if (langSel) {
+  langSel.addEventListener("change", () => {
+    location.search = "?lang=" + encodeURIComponent(langSel.value);
+  });
+}
+
 const tabs = document.querySelectorAll("nav.tabs button");
 function showTab(name) {
   for (const tab of tabs) {

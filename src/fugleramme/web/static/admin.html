@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$title</title>
-<link rel="stylesheet" href="/admin.css?v=$version&amp;a=4">
+<link rel="stylesheet" href="/admin.css?v=$version&amp;a=5">
 </head>
 <body>
 <header>
@@ -13,10 +13,12 @@
     <a href="/">$nav_kiosk</a>
     <a id="birdnet" href="#" title="$nav_birdnet_title">BirdNET-Go</a>
     <a href="$docs_url" target="_blank" rel="noopener">$nav_docs</a>
-    <span class="lang-switch" aria-label="Language">
-      <a href="?lang=en" class="$lang_en_class">English</a>
-      <a href="?lang=zh" class="$lang_zh_class">中文</a>
-    </span>
+    <label class="lang-switch">
+      <select id="admin-lang" aria-label="Language">
+        <option value="en"$lang_en_selected>English</option>
+        <option value="zh"$lang_zh_selected>中文</option>
+      </select>
+    </label>
   </nav>
 </header>
 <nav class="tabs" role="tablist">
@@ -98,6 +100,6 @@
   </dl>
 </section>
 <script id="config" type="application/json">$config</script>
-<script src="/admin.js?v=$version&amp;a=4"></script>
+<script src="/admin.js?v=$version&amp;a=5"></script>
 </body>
 </html>
