@@ -52,6 +52,26 @@ NON_BIRDS = {
 
 HEARD = SPECIES + list(NON_BIRDS)
 
+def _zh_dictionary() -> dict[str, str]:
+    """Full BirdNET Chinese labels, with short names for the fake's local species."""
+    from .taxa import _zh_names
+
+    names = dict(_zh_names())
+    names.update(
+        {
+            "Turdus merula": "乌鸫",
+            "Parus major": "大山雀",
+            "Fringilla coelebs": "苍头燕雀",
+            "Pica pica": "喜鹊",
+            "Passer domesticus": "家麻雀",
+            "Cyanistes caeruleus": "蓝山雀",
+            "Erithacus rubecula": "欧亚鸲",
+            "Corvus cornix": "冠小嘴乌鸦",
+        }
+    )
+    return names
+
+
 # Languages for those species, as BirdNET-Go's own dictionaries give them:
 # lowercase in Norwegian, titled in English, Chinese from the zh label set.
 # code -> (display name, {species: name})
@@ -82,19 +102,7 @@ NAMES: dict[str, tuple[str, dict[str, str]]] = {
             "Corvus cornix": "Hooded Crow",
         },
     ),
-    "zh": (
-        "Chinese",
-        {
-            "Turdus merula": "乌鸫",
-            "Parus major": "大山雀",
-            "Fringilla coelebs": "苍头燕雀",
-            "Pica pica": "喜鹊",
-            "Passer domesticus": "家麻雀",
-            "Cyanistes caeruleus": "蓝山雀",
-            "Erithacus rubecula": "欧亚鸲",
-            "Corvus cornix": "冠小嘴乌鸦",
-        },
-    ),
+    "zh": ("Chinese", _zh_dictionary()),
 }
 
 # BirdNET-Go lists locales it has no dictionary for, so the frame's probe has to

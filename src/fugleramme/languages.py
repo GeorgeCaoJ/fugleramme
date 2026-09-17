@@ -292,6 +292,14 @@ class Namer:
         if code in (SCIENTIFIC, NONE):
             return scientific
         common = self._names.get(code, {}).get(scientific)
+        if not common and code == "zh":
+            # Detector dicts can be sparse (fake) or lagging; fall back to the
+            # vendored BirdNET Chinese label list so collage/admin still read.
+            from .taxa import chinese_of
+
+            common = chinese_of(scientific)
+            # Chinese names are already complete words; do not title-case them.
+            return common or scientific
         return _capitalized(common) if common else scientific
 
     def parts(self, scientific: str) -> tuple[str, ...]:
