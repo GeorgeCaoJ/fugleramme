@@ -12,8 +12,8 @@ from ..source import NEEDS_PASSWORD
 # Mode radio labels (keys match modes.MODES).
 MODES = {
     "collage": "拼贴（默认）",
-    "latest": "最新一只",
-    "arrival": "最新到访",
+    "latest": "当前最新到访",
+    "arrival": "首次出现",
 }
 
 LOOKBACK = {

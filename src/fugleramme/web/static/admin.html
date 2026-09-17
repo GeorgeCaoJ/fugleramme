@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fugleramme 管理</title>
-<link rel="stylesheet" href="/admin.css?v=$version">
+<link rel="stylesheet" href="/admin.css?v=$version&amp;a=3">
 </head>
 <body>
 <header>
@@ -43,6 +43,16 @@
       <img id="shot" alt="当前画面">
       <div class="mat" id="mat" hidden></div>
     </div>
+    <div class="analyze-box" id="analyze-box">
+      <h2>音频识别</h2>
+      <p class="note">上传录音后调用 BirdNET 分析，结果会作为最新识别显示在上方预览中。</p>
+      <form id="analyze" enctype="multipart/form-data">
+        <label><span>音频文件</span>
+          <input type="file" name="audio" id="audio-file" accept="audio/*,.wav,.mp3,.flac,.ogg,.webm,.m4a"></label>
+        <button type="button" id="analyze-btn">开始识别</button>
+        <span id="analyze-result"></span>
+      </form>
+    </div>
     <h2>画面上的鸟（<span id="count">$species_count</span>）</h2>
     <ul class="species" id="species">$species_rows</ul>
   </aside>
@@ -80,6 +90,6 @@
   </dl>
 </section>
 <script id="config" type="application/json">$config</script>
-<script src="/admin.js?v=$version"></script>
+<script src="/admin.js?v=$version&amp;a=3"></script>
 </body>
 </html>

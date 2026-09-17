@@ -13,6 +13,19 @@ nav.tabs button[aria-selected="true"] { border-bottom-color: #446; font-weight: 
 section[hidden] { display: none; }
 .cols { display: flex; gap: 2.5rem; align-items: flex-start; }
 form.settings { flex: 0 0 22rem; }
+.analyze-box {
+  margin: 1rem 0 1.25rem;
+  padding: 0.85rem 1rem;
+  background: #f4f2ee;
+  border-radius: 8px;
+}
+.analyze-box h2 { margin-top: 0; }
+.analyze-box .note { margin: 0.35rem 0 0.75rem; color: #555; font-size: 0.9rem; }
+#analyze input[type=file] { width: 100%; padding: 0.3rem 0; }
+#analyze-result { display: block; margin-top: 0.5rem; font-size: 0.9rem; }
+#analyze-result.ok { color: #2a6; }
+#analyze-result.bad { color: #a33; }
+#analyze-result.warn { color: #a70; }
 aside.side { flex: 1; min-width: 0; }
 /* Two language columns under 鸟类名称; font panels are parked into .font-slot. */
 .lang-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0.75rem 0 0; }

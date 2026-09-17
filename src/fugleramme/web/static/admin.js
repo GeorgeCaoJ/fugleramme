@@ -145,7 +145,7 @@ const queueRender = () => {
 function loadPreview() {
   mat.hidden = true;  // the band only stands in until the render starts
   const query = serialize(form);
-  if (query === shown) return;
+  if (query === shown && !preview.classList.contains("loading")) return;
   const id = ++seq;
   const [w, h] = cfg.panel;
   // Turned now rather than when the render lands, so the box does not jump.
@@ -161,9 +161,11 @@ function loadPreview() {
   };
   next.onerror = () => {
     if (id !== seq) return;
+    preview.classList.remove("loading");
     caption.textContent = "预览不可用";
   };
-  next.src = "/preview.png?" + query;
+  // Cache-buster: upload injects must not reuse a browser-cached collage.
+  next.src = "/preview.png?" + query + "&_=" + Date.now();
   loadSpecies(query, id);
 }
 
@@ -265,6 +267,8 @@ const serialize = (f) => new URLSearchParams(new FormData(f)).toString();
 const changed = new Map();
 for (const f of document.querySelectorAll("form.settings, form.block")) {
   const button = f.querySelector("button[type=submit]");
+  // Upload / action-only forms have no Save button and must not stop the page.
+  if (!button) continue;
   const served = serialize(f);
   const dirty = () => serialize(f) !== served;
   changed.set(f, dirty);
@@ -279,6 +283,48 @@ window.addEventListener("beforeunload", (e) => {
   e.preventDefault();
   e.returnValue = "";
 });
+
+// Upload audio → BirdNET-Go file analysis → overlay on preview.
+const analyzeBtn = document.getElementById("analyze-btn");
+const analyzeResult = document.getElementById("analyze-result");
+const audioFile = document.getElementById("audio-file");
+if (analyzeBtn && audioFile) {
+  analyzeBtn.addEventListener("click", async () => {
+    if (!audioFile.files.length) {
+      analyzeResult.className = "bad";
+      analyzeResult.textContent = "请先选择音频文件";
+      return;
+    }
+    analyzeBtn.disabled = true;
+    analyzeResult.className = "warn";
+    analyzeResult.textContent = "识别中…";
+    const body = new FormData();
+    body.append("audio", audioFile.files[0]);
+    try {
+      const answer = await fetch("/analyze-audio", {method: "POST", body});
+      const result = await answer.json();
+      if (result.ok) {
+        analyzeResult.className = "ok";
+        const names = (result.species || []).map((s) => s.name).join("、");
+        analyzeResult.textContent = result.message + (names ? "：" + names : "");
+        // Collage shows every recognized bird; force a full preview reload.
+        const collage = form.querySelector("input[name=mode][value=collage]");
+        if (collage) collage.checked = true;
+        syncMode();
+        shown = null;
+        clearTimeout(timer);
+        loadPreview();
+      } else {
+        analyzeResult.className = "bad";
+        analyzeResult.textContent = result.message || "无法识别";
+      }
+    } catch (e) {
+      analyzeResult.className = "bad";
+      analyzeResult.textContent = "服务未响应";
+    }
+    analyzeBtn.disabled = false;
+  });
+}
 
 loadPreview();
 if (scrolled !== null) window.scrollTo(0, Number(scrolled));
