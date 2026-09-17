@@ -24,7 +24,10 @@ sessionStorage.removeItem("scroll");
 const was = sessionStorage.getItem("version");
 const state = document.getElementById("state");
 sessionStorage.setItem("version", cfg.version);
-if (state && was && was !== cfg.version) state.textContent = "已更新至 v" + cfg.version;
+const i18n = cfg.i18n || {};
+if (state && was && was !== cfg.version) {
+  state.textContent = (i18n.updated || ("updated to v" + cfg.version));
+}
 
 const tabs = document.querySelectorAll("nav.tabs button");
 function showTab(name) {
@@ -109,7 +112,7 @@ if (test) {
   test.addEventListener("click", async () => {
     test.disabled = true;
     outcome.className = "";
-    outcome.textContent = "测试中…";
+    outcome.textContent = i18n.testing || "testing…";
     try {
       const body = new URLSearchParams(new FormData(detectorForm));
       const answer = await fetch("/detector", {method: "POST", body});
@@ -124,7 +127,7 @@ if (test) {
       if (!changed.get(detectorForm)()) row.innerHTML = result.status;
     } catch (e) {
       outcome.className = "bad";
-      outcome.textContent = "服务未响应";
+      outcome.textContent = i18n.noAnswer || "the frame did not answer";
     }
     test.disabled = false;
   });
@@ -162,7 +165,7 @@ function loadPreview() {
   next.onerror = () => {
     if (id !== seq) return;
     preview.classList.remove("loading");
-    caption.textContent = "预览不可用";
+    caption.textContent = i18n.previewUnavailable || "Preview unavailable";
   };
   // Cache-buster: upload injects must not reuse a browser-cached collage.
   next.src = "/preview.png?" + query + "&_=" + Date.now();
@@ -292,12 +295,12 @@ if (analyzeBtn && audioFile) {
   analyzeBtn.addEventListener("click", async () => {
     if (!audioFile.files.length) {
       analyzeResult.className = "bad";
-      analyzeResult.textContent = "请先选择音频文件";
+      analyzeResult.textContent = i18n.pickFile || "Choose an audio file first";
       return;
     }
     analyzeBtn.disabled = true;
     analyzeResult.className = "warn";
-    analyzeResult.textContent = "识别中…";
+    analyzeResult.textContent = i18n.analyzing || "Recognizing…";
     const body = new FormData();
     body.append("audio", audioFile.files[0]);
     try {
@@ -305,8 +308,10 @@ if (analyzeBtn && audioFile) {
       const result = await answer.json();
       if (result.ok) {
         analyzeResult.className = "ok";
-        const names = (result.species || []).map((s) => s.name).join("、");
-        analyzeResult.textContent = result.message + (names ? "：" + names : "");
+        const sep = cfg.lang === "zh" ? "、" : ", ";
+        const colon = cfg.lang === "zh" ? "：" : ": ";
+        const names = (result.species || []).map((s) => s.name).join(sep);
+        analyzeResult.textContent = result.message + (names ? colon + names : "");
         // Collage shows every recognized bird; force a full preview reload.
         const collage = form.querySelector("input[name=mode][value=collage]");
         if (collage) collage.checked = true;
@@ -316,11 +321,11 @@ if (analyzeBtn && audioFile) {
         loadPreview();
       } else {
         analyzeResult.className = "bad";
-        analyzeResult.textContent = result.message || "无法识别";
+        analyzeResult.textContent = result.message || i18n.cannotRecognize || "Could not recognize";
       }
     } catch (e) {
       analyzeResult.className = "bad";
-      analyzeResult.textContent = "服务未响应";
+      analyzeResult.textContent = i18n.noResponse || "the frame did not answer";
     }
     analyzeBtn.disabled = false;
   });

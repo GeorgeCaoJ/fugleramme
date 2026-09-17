@@ -1,95 +1,103 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="$html_lang">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fugleramme 管理</title>
-<link rel="stylesheet" href="/admin.css?v=$version&amp;a=3">
+<title>$title</title>
+<link rel="stylesheet" href="/admin.css?v=$version&amp;a=4">
 </head>
 <body>
 <header>
   <h1>Fugleramme</h1>
-  <nav><a href="/">展示页</a><a id="birdnet" href="#" title="检测与统计">BirdNET-Go</a><a href="$docs_url" target="_blank" rel="noopener">文档</a></nav>
+  <nav>
+    <a href="/">$nav_kiosk</a>
+    <a id="birdnet" href="#" title="$nav_birdnet_title">BirdNET-Go</a>
+    <a href="$docs_url" target="_blank" rel="noopener">$nav_docs</a>
+    <span class="lang-switch" aria-label="Language">
+      <a href="?lang=en" class="$lang_en_class">English</a>
+      <a href="?lang=zh" class="$lang_zh_class">中文</a>
+    </span>
+  </nav>
 </header>
 <nav class="tabs" role="tablist">
-  <button type="button" role="tab" data-tab="settings">显示</button>
-  <button type="button" role="tab" data-tab="system">系统</button>
+  <button type="button" role="tab" data-tab="settings">$tab_display</button>
+  <button type="button" role="tab" data-tab="system">$tab_system</button>
 </nav>
 <section id="tab-settings" class="cols">
   <form class="settings" method="post" action="/admin">
     <input type="hidden" name="$checkboxes" value="show_names cjk_bold">
     $mode_field
-    <label><span>分辨率 <span class="hint" tabindex="0" role="img" aria-label="仅影响网页预览"></span></span>
+    <label><span>$resolution <span class="hint" tabindex="0" role="img" aria-label="$resolution_hint"></span></span>
       <select name="web_resolution">$resolutions</select></label>
-    <label><span>旋转 <span class="hint" tabindex="0" role="img" aria-label="相框悬挂方向"></span></span>
+    <label><span>$rotation <span class="hint" tabindex="0" role="img" aria-label="$rotation_hint"></span></span>
       <select name="rotation">$rotations</select></label>
-    <label><span>边距 <small id="margin-value">$margin%</small> <span class="hint" tabindex="0" role="img" aria-label="为压在屏幕上的卡纸留出空白边"></span></span>
-      <input type="range" name="margin" min="0" max="$margin_max" step="1" value="$margin"></label>
-    <label><span>墨水屏刷新 <span class="hint" tabindex="0" role="img" aria-label="画面至少保持多久后，才允许因新鸟而重绘"></span></span>
+    <label><span>$margin <small id="margin-value">$margin_value%</small> <span class="hint" tabindex="0" role="img" aria-label="$margin_hint"></span></span>
+      <input type="range" name="margin" min="0" max="$margin_max" step="1" value="$margin_value"></label>
+    <label><span>$refresh <span class="hint" tabindex="0" role="img" aria-label="$refresh_hint"></span></span>
       <select name="refresh_minutes">$refreshes</select></label>
     <label id="lookback"$lookback_off>
-      <span>回看窗口 <span class="hint" tabindex="0" role="img" aria-label="相框向前看多久"></span></span>
+      <span>$lookback <span class="hint" tabindex="0" role="img" aria-label="$lookback_hint"></span></span>
       <select name="lookback_hours"$lookback_disabled>$lookbacks</select></label>
     $limit_field
     $layout_field
     $names_field
     $style_field
-    <button type="submit">保存</button>
+    <button type="submit">$save</button>
   </form>
   <aside class="side">
-    <h2>预览</h2>
+    <h2>$preview</h2>
     <div class="preview loading" id="preview">
-      <p class="rendering"><span class="spinner"></span> 正在渲染…</p>
-      <img id="shot" alt="当前画面">
+      <p class="rendering"><span class="spinner"></span> $rendering</p>
+      <img id="shot" alt="$shot_alt">
       <div class="mat" id="mat" hidden></div>
     </div>
     <div class="analyze-box" id="analyze-box">
-      <h2>音频识别</h2>
-      <p class="note">上传录音后调用 BirdNET 分析，结果会作为最新识别显示在上方预览中。</p>
+      <h2>$analyze_title</h2>
+      <p class="note">$analyze_note</p>
       <form id="analyze" enctype="multipart/form-data">
-        <label><span>音频文件</span>
+        <label><span>$analyze_file</span>
           <input type="file" name="audio" id="audio-file" accept="audio/*,.wav,.mp3,.flac,.ogg,.webm,.m4a"></label>
-        <button type="button" id="analyze-btn">开始识别</button>
+        <button type="button" id="analyze-btn">$analyze_btn</button>
         <span id="analyze-result"></span>
       </form>
     </div>
-    <h2>画面上的鸟（<span id="count">$species_count</span>）</h2>
+    <h2>$species_heading</h2>
     <ul class="species" id="species">$species_rows</ul>
   </aside>
 </section>
 <section id="tab-system" hidden>
-  <h2>更新</h2>
+  <h2>$updates</h2>
   <dl class="status">
-    <dt>版本</dt><dd>v$version</dd>
-    <dt>更新</dt><dd class="update">$update</dd>
+    <dt>$version_label</dt><dd>v$app_version</dd>
+    <dt>$update</dt><dd class="update">$update_html</dd>
   </dl>
   $auto_update
-  <h2>检测器</h2>
+  <h2>$detector</h2>
   <dl class="status">
     <dt>BirdNET-Go</dt><dd id="detector-state">$birdnet</dd>
   </dl>
   <form class="block detector" id="detector" method="post" action="/admin">
     $detector_field
-    <button type="submit">保存</button>
-    <button type="button" id="test">测试连接</button>
+    <button type="submit">$save</button>
+    <button type="button" id="test">$test_connection</button>
     <span id="test-result"></span>
   </form>
-  <h2>系统</h2>
+  <h2>$system</h2>
   <dl class="status">
-    <dt>Inky 墨水屏</dt><dd>$panel</dd>
-    <dt>主机</dt><dd>$host</dd>
-    <dt>网络</dt><dd>$online</dd>
-    <dt>磁盘</dt><dd>$disk</dd>
-    <dt>启动时间</dt><dd>$started</dd>
-    <dt>展示页分辨率</dt><dd>$kiosk_size</dd>
+    <dt>$panel</dt><dd>$panel_value</dd>
+    <dt>$host</dt><dd>$host_value</dd>
+    <dt>$network</dt><dd>$online</dd>
+    <dt>$disk</dt><dd>$disk_value</dd>
+    <dt>$started</dt><dd>$started_value</dd>
+    <dt>$kiosk_size</dt><dd>$kiosk_size_value</dd>
   </dl>
-  <h2>活动</h2>
+  <h2>$activity</h2>
   <dl class="status">
-    <dt>上次渲染</dt><dd>$rendered</dd>
-    <dt>最近检测</dt><dd>$latest</dd>
+    <dt>$rendered</dt><dd>$rendered_value</dd>
+    <dt>$latest</dt><dd>$latest_value</dd>
   </dl>
 </section>
 <script id="config" type="application/json">$config</script>
-<script src="/admin.js?v=$version&amp;a=3"></script>
+<script src="/admin.js?v=$version&amp;a=4"></script>
 </body>
 </html>

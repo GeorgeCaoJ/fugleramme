@@ -105,7 +105,7 @@ def test_a_page_that_cannot_reach_the_detector_says_so(stranded):
 def test_the_admin_still_renders_with_the_detector_gone(stranded):
     status, _headers, body = _fetch(stranded + "/admin")
     assert status == 200
-    assert "检测器不可达".encode() in body
+    assert b"detector unreachable" in body
 
 
 def _raw(url: str, request: str) -> tuple[str, bytes]:

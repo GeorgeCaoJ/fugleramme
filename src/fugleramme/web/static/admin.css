@@ -3,6 +3,9 @@ header { display: flex; justify-content: space-between; align-items: baseline; f
          gap: 0.5rem; border-bottom: 1px solid #e5e2dc; padding-bottom: 0.75rem; margin-bottom: 2rem; }
 header h1 { margin: 0; }
 header nav a { margin-left: 1.25rem; }
+.lang-switch { margin-left: 1.25rem; font-size: 0.9rem; }
+.lang-switch a { margin-left: 0.5rem; }
+.lang-switch a.active { font-weight: 700; color: #223; pointer-events: none; }
 h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
 /* Undoes the page-wide block `span`, which would break a heading over three lines. */
 h2 span { display: inline; font-weight: inherit; margin: 0; }

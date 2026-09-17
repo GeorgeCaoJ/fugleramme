@@ -40,7 +40,8 @@ from ..picks import Picks
 from ..settings import Settings, SettingsStore, merged
 from ..source import Source, Unavailable
 from ..status import Status
-from . import STATIC_DIR, admin
+from . import STATIC_DIR, admin, i18n
+from .i18n import UI
 from .multipart import parse as parse_multipart
 
 log = logging.getLogger(__name__)
@@ -178,7 +179,25 @@ def make_handler(
                 JSON,
             )
 
+        def _locale(self) -> str:
+            """Cookie override, else Accept-Language, else English."""
+            return i18n.negotiate(
+                i18n.parse_cookie(self.headers.get("Cookie")),
+                self.headers.get("Accept-Language"),
+            )
+
         def _admin(self):
+            query = parse_qs(urlparse(self.path).query)
+            wanted = (query.get("lang") or [None])[0]
+            if wanted in i18n.LOCALES:
+                self.send_response(303)
+                self.send_header(
+                    "Set-Cookie",
+                    f"{i18n.COOKIE}={wanted}; Path=/; Max-Age=31536000; SameSite=Lax",
+                )
+                self.send_header("Location", "/admin")
+                self.end_headers()
+                return
             settings = store.get()
             html = admin.page(
                 self._context(settings),
@@ -187,6 +206,7 @@ def make_handler(
                 resolution_of(panel),
                 panel is not None,
                 store.path.parent,
+                lang=self._locale(),
             )
             self._send(200, html.encode(), HTML)
 
@@ -239,14 +259,17 @@ def make_handler(
 
         def _analyze_audio(self):
             """Upload an audio file, run BirdNET-Go `file`, inject into the overlay."""
+            ui = UI(self._locale())
             length = int(self.headers.get("Content-Length", 0))
             if length <= 0:
-                self._send(400, json.dumps({"ok": False, "message": "未收到文件"}).encode(), JSON)
+                self._send(
+                    400, json.dumps({"ok": False, "message": ui.t("analyze_no_file")}).encode(), JSON
+                )
                 return
             if length > analyze.MAX_UPLOAD_BYTES:
                 self._send(
                     413,
-                    json.dumps({"ok": False, "message": "文件过大（上限 25MB）"}).encode(),
+                    json.dumps({"ok": False, "message": ui.t("analyze_too_large")}).encode(),
                     JSON,
                 )
                 return
@@ -258,27 +281,33 @@ def make_handler(
                 return
             upload = parts.files.get("audio") or parts.files.get("file")
             if upload is None or not upload.data:
-                self._send(400, json.dumps({"ok": False, "message": "请选择音频文件"}).encode(), JSON)
+                self._send(
+                    400,
+                    json.dumps({"ok": False, "message": ui.t("analyze_pick_file")}).encode(),
+                    JSON,
+                )
                 return
             suffix = Path(upload.filename or "audio.wav").suffix.lower() or ".wav"
             if suffix not in analyze.ALLOWED_SUFFIXES:
                 self._send(
                     400,
-                    json.dumps({"ok": False, "message": f"不支持的格式：{suffix}"}).encode(),
+                    json.dumps(
+                        {"ok": False, "message": ui.t("analyze_bad_format", suffix=suffix)}
+                    ).encode(),
                     JSON,
                 )
                 return
             if not isinstance(source, UploadOverlay):
                 self._send(
                     500,
-                    json.dumps({"ok": False, "message": "上传识别未启用"}).encode(),
+                    json.dumps({"ok": False, "message": ui.t("analyze_disabled")}).encode(),
                     JSON,
                 )
                 return
             if not analyze_lock.acquire(blocking=False):
                 self._send(
                     409,
-                    json.dumps({"ok": False, "message": "已有识别任务在进行，请稍候"}).encode(),
+                    json.dumps({"ok": False, "message": ui.t("analyze_busy")}).encode(),
                     JSON,
                 )
                 return
@@ -290,16 +319,19 @@ def make_handler(
                         detections = analyze.run_file_analysis(path)
                     except analyze.AnalyzeError as exc:
                         source.clear()
+                        msg = str(exc)
+                        if msg in ("无法识别", "Could not recognize"):
+                            msg = ui.t("analyze_fail")
                         self._send(
                             200,
-                            json.dumps({"ok": False, "message": str(exc), "species": []}).encode(),
+                            json.dumps({"ok": False, "message": msg, "species": []}).encode(),
                             JSON,
                         )
                         return
                 settings = store.get()
                 style = resolve(settings.style, images_dir)
                 drawable = drawable_keys(images_dir, style)
-                # Skip species this style cannot draw - no "无插画" rows on the page.
+                # Skip species this style cannot draw - no "no art" rows on the page.
                 kept = [d for d in detections if name_key(d.scientific_name) in drawable]
                 if not kept:
                     source.clear()
@@ -309,9 +341,7 @@ def make_handler(
                             {
                                 "ok": False,
                                 "message": (
-                                    "识别到鸟类，但当前插画风格中没有对应插画"
-                                    if detections
-                                    else "无法识别"
+                                    ui.t("analyze_no_art") if detections else ui.t("analyze_fail")
                                 ),
                                 "species": [],
                                 "skipped": len(detections),
@@ -335,9 +365,9 @@ def make_handler(
                     for d in kept
                 ]
                 skipped = len(detections) - len(kept)
-                message = f"识别到 {len(species)} 种有插画的鸟"
+                message = ui.t("analyze_ok", n=len(species))
                 if skipped:
-                    message += f"（另有 {skipped} 种无插画已跳过）"
+                    message += ui.t("analyze_skipped", n=skipped)
                 self._send(
                     200,
                     json.dumps(
@@ -359,7 +389,7 @@ def make_handler(
             form = parse_qs(self.rfile.read(length).decode(), keep_blank_values=True)
             # POST, not a query: the connection test carries a password.
             if route == "/detector":
-                answer = admin.connection(form, store.get())
+                answer = admin.connection(form, store.get(), lang=self._locale())
                 self._send(200, json.dumps(answer).encode(), JSON)
                 return
             if route != "/admin":

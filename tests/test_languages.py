@@ -180,11 +180,11 @@ def test_a_language_birdnet_go_is_not_serving_stays_selectable():
     # A stopped container must not silently reset the frame's saved language.
     offered = [(SCIENTIFIC, "Scientific")]
 
-    assert 'value="nb" selected>挪威语（不可用）' in _language_select(
+    assert 'value="nb" selected>Norwegian (unavailable)' in _language_select(
         "primary_language", offered, "nb"
     )
     assert 'value=""' not in _language_select("primary_language", offered, SCIENTIFIC)
-    assert '<option value="" selected>无' in _language_select(
+    assert '<option value="" selected>None' in _language_select(
         "secondary_language", offered, NONE, optional=True
     )
 
