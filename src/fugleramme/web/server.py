@@ -24,19 +24,24 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import tempfile
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import ClassVar
 from urllib.parse import parse_qs, urlparse
 
-from .. import __version__, modes, updates
+from .. import __version__, analyze, modes, updates
 from ..languages import namer
+from ..names import drawable_keys, normalize as name_key, resolve
+from ..overlay import UploadOverlay
 from ..panel import Panel, resolution_of
 from ..picks import Picks
 from ..settings import Settings, SettingsStore, merged
 from ..source import Source, Unavailable
 from ..status import Status
 from . import STATIC_DIR, admin
+from .multipart import parse as parse_multipart
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +74,8 @@ def make_handler(
     # The kiosk polls every few seconds, so one warning per failed request would
     # never stop. Say it once, and again on recovery.
     unreachable = False
+    # One BirdNET-Go `file` run at a time: the model is heavy and not reentrant.
+    analyze_lock = threading.Lock()
 
     def note(message: str, gone: bool) -> None:
         nonlocal unreachable
@@ -230,8 +237,122 @@ def make_handler(
             self.head = True
             self.do_GET()
 
+        def _analyze_audio(self):
+            """Upload an audio file, run BirdNET-Go `file`, inject into the overlay."""
+            length = int(self.headers.get("Content-Length", 0))
+            if length <= 0:
+                self._send(400, json.dumps({"ok": False, "message": "未收到文件"}).encode(), JSON)
+                return
+            if length > analyze.MAX_UPLOAD_BYTES:
+                self._send(
+                    413,
+                    json.dumps({"ok": False, "message": "文件过大（上限 25MB）"}).encode(),
+                    JSON,
+                )
+                return
+            body = self.rfile.read(length)
+            try:
+                parts = parse_multipart(self.headers.get("Content-Type", ""), body)
+            except ValueError as exc:
+                self._send(400, json.dumps({"ok": False, "message": str(exc)}).encode(), JSON)
+                return
+            upload = parts.files.get("audio") or parts.files.get("file")
+            if upload is None or not upload.data:
+                self._send(400, json.dumps({"ok": False, "message": "请选择音频文件"}).encode(), JSON)
+                return
+            suffix = Path(upload.filename or "audio.wav").suffix.lower() or ".wav"
+            if suffix not in analyze.ALLOWED_SUFFIXES:
+                self._send(
+                    400,
+                    json.dumps({"ok": False, "message": f"不支持的格式：{suffix}"}).encode(),
+                    JSON,
+                )
+                return
+            if not isinstance(source, UploadOverlay):
+                self._send(
+                    500,
+                    json.dumps({"ok": False, "message": "上传识别未启用"}).encode(),
+                    JSON,
+                )
+                return
+            if not analyze_lock.acquire(blocking=False):
+                self._send(
+                    409,
+                    json.dumps({"ok": False, "message": "已有识别任务在进行，请稍候"}).encode(),
+                    JSON,
+                )
+                return
+            try:
+                with tempfile.TemporaryDirectory(prefix="fugleramme-upload-") as tmp:
+                    path = Path(tmp) / f"upload{suffix}"
+                    path.write_bytes(upload.data)
+                    try:
+                        detections = analyze.run_file_analysis(path)
+                    except analyze.AnalyzeError as exc:
+                        source.clear()
+                        self._send(
+                            200,
+                            json.dumps({"ok": False, "message": str(exc), "species": []}).encode(),
+                            JSON,
+                        )
+                        return
+                settings = store.get()
+                style = resolve(settings.style, images_dir)
+                drawable = drawable_keys(images_dir, style)
+                # Skip species this style cannot draw - no "无插画" rows on the page.
+                kept = [d for d in detections if name_key(d.scientific_name) in drawable]
+                if not kept:
+                    source.clear()
+                    self._send(
+                        200,
+                        json.dumps(
+                            {
+                                "ok": False,
+                                "message": (
+                                    "识别到鸟类，但当前插画风格中没有对应插画"
+                                    if detections
+                                    else "无法识别"
+                                ),
+                                "species": [],
+                                "skipped": len(detections),
+                            }
+                        ).encode(),
+                        JSON,
+                    )
+                    return
+                source.set_upload(kept)
+                namer_of = namer(
+                    settings.primary_language,
+                    settings.secondary_language,
+                    store.path.parent,
+                )
+                species = [
+                    {
+                        "scientific": d.scientific_name,
+                        "name": namer_of.inline(d.scientific_name),
+                        "confidence": round(d.confidence, 3),
+                    }
+                    for d in kept
+                ]
+                skipped = len(detections) - len(kept)
+                message = f"识别到 {len(species)} 种有插画的鸟"
+                if skipped:
+                    message += f"（另有 {skipped} 种无插画已跳过）"
+                self._send(
+                    200,
+                    json.dumps(
+                        {"ok": True, "message": message, "species": species, "skipped": skipped}
+                    ).encode(),
+                    JSON,
+                )
+            finally:
+                analyze_lock.release()
+
         def do_POST(self):
             route = urlparse(self.path).path
+            if route == "/analyze-audio":
+                self._analyze_audio()
+                return
             length = int(self.headers.get("Content-Length", 0))
             # keep_blank_values: an emptied field is a change, not an absent one.
             # "None" for the second language and a cleared credential both post blank.

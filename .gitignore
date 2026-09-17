@@ -36,3 +36,6 @@ site/
 
 # Local demo screenshots
 demo-collage*.png
+
+# Vendored BirdNET-Go binary for local file analysis
+.tools/

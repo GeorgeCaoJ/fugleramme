@@ -317,13 +317,22 @@ _cache: tuple[tuple, bytes] | None = None
 _cache_lock = threading.Lock()
 
 
+def invalidate_png_cache() -> None:
+    """Drop the HTTP PNG cache (e.g. after an upload injects new birds)."""
+    global _cache
+    with _cache_lock:
+        _cache = None
+
+
 def png_bytes(ctx: Context) -> bytes:
     """The current page as PNG, for the HTTP endpoints. The lock is held across
     the render so concurrent kiosk requests wait for one render instead of each
     doing their own."""
     global _cache
     with _cache_lock:
-        key = state_key(ctx)
+        # Include upload_rev so an inject cannot reuse a collage rendered before it.
+        upload_rev = getattr(ctx.source, "upload_rev", 0)
+        key = (state_key(ctx), upload_rev)
         if _cache is not None and _cache[0] == key:
             return _cache[1]
         buffer = io.BytesIO()

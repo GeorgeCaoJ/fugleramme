@@ -23,6 +23,7 @@ from . import __version__, buttons, languages, modes, taxa, updates
 from .api import Configured
 from .config import Config
 from .languages import namer
+from .overlay import UploadOverlay
 from .panel import init_panel, resolution_of
 from .picks import FILENAME as PICKS_FILE, Picks
 from .render.dither import dither
@@ -112,7 +113,10 @@ def run(config: Config) -> None:
     log.info("Fugleramme v%s", __version__)
 
     panel = init_panel()
-    store, source = detector(config)
+    store, configured = detector(config)
+    # Upload analysis injects hits here so preview/kiosk reuse the same Source.
+    source = UploadOverlay(configured)
+    languages.use(source)
     picks = Picks(config.config_path.parent / PICKS_FILE)
     status = Status()
 

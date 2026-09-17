@@ -30,6 +30,12 @@ station. To work against a real one instead, pass its address:
 `uv run fugleramme-check` says whether a detector answers everything the frame
 needs, and is the first thing to run when a page comes up empty.
 
+Admin **音频识别** uploads a recording and runs offline BirdNET analysis (same
+model family as BirdNET-Go). Set `BIRDNET_GO_BIN` / `BIRDA_BIN`, or place
+`birda` under `.tools/birda` (Docker + `ubuntu:24.04` is used when the host
+glibc is too old). Hits are injected into the preview as the latest detections;
+no birds → 「无法识别」.
+
 > [!NOTE]
 > I can only test on the hardware I have. If a change touches the panel, the
 > buttons or the install scripts, say in the PR what you ran it on.
