@@ -55,6 +55,8 @@ class Context:
     show_names: bool
     lookback_hours: float
     font_key: str
+    cjk_font_key: str
+    cjk_bold: bool
     label_size: str
     species_limit: int
     ranking: str
@@ -91,6 +93,8 @@ def context(
         show_names=settings.show_names,
         lookback_hours=settings.lookback_hours,
         font_key=settings.label_font,
+        cjk_font_key=settings.cjk_font,
+        cjk_bold=settings.cjk_bold,
         label_size=settings.label_size,
         species_limit=settings.species_limit,
         ranking=settings.ranking,
@@ -126,6 +130,8 @@ def _plate(ctx: Context, name: str | None, note: str = "", art: Path | None = No
         ctx.label_size,
         ctx.perches(),
         margin=ctx.margin,
+        cjk_font_key=ctx.cjk_font_key,
+        cjk_bold=ctx.cjk_bold,
     )
 
 
@@ -170,6 +176,8 @@ def _collage(ctx: Context) -> Image.Image:
         ctx.perches(),
         ctx.layout,
         ctx.margin,
+        cjk_font_key=ctx.cjk_font_key,
+        cjk_bold=ctx.cjk_bold,
     )
 
 
@@ -279,6 +287,8 @@ def state_key(ctx: Context) -> tuple:
         ctx.resolution,
         ctx.show_names,
         ctx.font_key,
+        ctx.cjk_font_key,
+        ctx.cjk_bold,
         ctx.label_size,
         ctx.layout if mode.windowed else None,
         # The plate clamps to its own margin, so a nudge under it must not repaint.

@@ -42,7 +42,7 @@ NONE = ""  # secondary language unset
 _ALIASES = {"no": "nb"}
 
 # Offered first, ahead of the alphabetical rest.
-_PREFERRED = (SCIENTIFIC, "en", "nb")
+_PREFERRED = (SCIENTIFIC, "zh", "en", "nb")
 
 _CATALOG_TTL = 24 * 3600
 _DICT_TTL = 3600

@@ -180,11 +180,11 @@ def test_a_language_birdnet_go_is_not_serving_stays_selectable():
     # A stopped container must not silently reset the frame's saved language.
     offered = [(SCIENTIFIC, "Scientific")]
 
-    assert 'value="nb" selected>nb (unavailable)' in _language_select(
+    assert 'value="nb" selected>挪威语（不可用）' in _language_select(
         "primary_language", offered, "nb"
     )
     assert 'value=""' not in _language_select("primary_language", offered, SCIENTIFIC)
-    assert '<option value="" selected>None' in _language_select(
+    assert '<option value="" selected>无' in _language_select(
         "secondary_language", offered, NONE, optional=True
     )
 
@@ -199,7 +199,12 @@ def test_names_come_through_the_detectors_own_session(detector, tmp_path):
 
     languages._catalog = None
     languages.use(ApiSource(url, "birdnet", "hunter2"))
-    assert catalog(tmp_path) == {SCIENTIFIC: "Scientific", "nb": "Norwegian", "en": "English"}
+    assert catalog(tmp_path) == {
+        SCIENTIFIC: "Scientific",
+        "zh": "Chinese",
+        "nb": "Norwegian",
+        "en": "English",
+    }
     assert namer("nb", SCIENTIFIC, tmp_path).label("Turdus merula") == "Svarttrost\n(Turdus merula)"
 
 

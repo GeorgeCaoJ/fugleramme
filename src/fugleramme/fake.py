@@ -52,8 +52,9 @@ NON_BIRDS = {
 
 HEARD = SPECIES + list(NON_BIRDS)
 
-# Two languages for those species, as BirdNET-Go's own dictionaries give them:
-# lowercase in Norwegian, titled in English. code -> (display name, {species: name})
+# Languages for those species, as BirdNET-Go's own dictionaries give them:
+# lowercase in Norwegian, titled in English, Chinese from the zh label set.
+# code -> (display name, {species: name})
 NAMES: dict[str, tuple[str, dict[str, str]]] = {
     "nb": (
         "Norwegian",
@@ -79,6 +80,19 @@ NAMES: dict[str, tuple[str, dict[str, str]]] = {
             "Cyanistes caeruleus": "Eurasian Blue Tit",
             "Erithacus rubecula": "European Robin",
             "Corvus cornix": "Hooded Crow",
+        },
+    ),
+    "zh": (
+        "Chinese",
+        {
+            "Turdus merula": "乌鸫",
+            "Parus major": "大山雀",
+            "Fringilla coelebs": "苍头燕雀",
+            "Pica pica": "喜鹊",
+            "Passer domesticus": "家麻雀",
+            "Cyanistes caeruleus": "蓝山雀",
+            "Erithacus rubecula": "欧亚鸲",
+            "Corvus cornix": "冠小嘴乌鸦",
         },
     ),
 }

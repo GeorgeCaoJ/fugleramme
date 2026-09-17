@@ -21,7 +21,14 @@ from .config import DEFAULT_DETECTOR_URL, DEFAULT_WEB_RESOLUTION, WEB_HEIGHTS
 from .languages import NONE, SCIENTIFIC
 from .modes import DEFAULT_MODE, MODES
 from .render.collage import DEFAULT_MARGIN, DEFAULT_RANKING, NO_LIMIT, RANKINGS
-from .render.fonts import DEFAULT_FONT, DEFAULT_LABEL_SIZE, FONTS, LABEL_SIZES
+from .render.fonts import (
+    DEFAULT_CJK_FONT,
+    DEFAULT_FONT,
+    DEFAULT_LABEL_SIZE,
+    CJK_FONTS,
+    FONTS,
+    LABEL_SIZES,
+)
 from .render.packing import DEFAULT_LAYOUT, LAYOUTS
 
 # How the frame hangs, counter-clockwise. 0/180 render landscape, 90/270 portrait.
@@ -100,7 +107,10 @@ class Settings:
     # against its API at render time like `sources`.
     primary_language: str = SCIENTIFIC
     secondary_language: str = NONE
+    # Western label face (sci / en / nb) and Chinese face (zh); mixed labels use both.
     label_font: str = DEFAULT_FONT
+    cjk_font: str = DEFAULT_CJK_FONT
+    cjk_bold: bool = False
     label_size: str = DEFAULT_LABEL_SIZE
     # Only needed for a BirdNET-Go that authenticates. The username is not in the
     # admin: BirdNET-Go asks for a password and matches the name against a fixed
@@ -218,6 +228,8 @@ def _coerce(raw: dict, base: Settings | None = None) -> Settings:
         primary_language=_language(raw.get("primary_language"), d.primary_language) or SCIENTIFIC,
         secondary_language=_language(raw.get("secondary_language"), d.secondary_language),
         label_font=_one_of(str(raw.get("label_font", d.label_font)), FONTS, d.label_font),
+        cjk_font=_one_of(str(raw.get("cjk_font", d.cjk_font)), CJK_FONTS, d.cjk_font),
+        cjk_bold=_as_bool(raw.get("cjk_bold"), d.cjk_bold),
         label_size=_one_of(str(raw.get("label_size", d.label_size)), LABEL_SIZES, d.label_size),
         detector_url=_url(raw.get("detector_url"), d.detector_url),
         detector_username=_text(raw.get("detector_username"), d.detector_username),

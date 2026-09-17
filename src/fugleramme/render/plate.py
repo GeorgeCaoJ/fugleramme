@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image
 
 from . import fonts
-from .page import blank, day_ordinal, draw_perch, fit, label_px, stamp, text_mask, trim
+from .page import blank, day_ordinal, draw_perch, fit, label_mask, label_px, stamp, trim
 from .paper import PAD, process_sprite
 
 DEFAULT_RESOLUTION = (1600, 1200)
@@ -43,6 +43,8 @@ def render_plate(
     perches: Sequence[Path] = (),
     day: int | None = None,
     margin: float = 0.0,
+    cjk_font_key: str = fonts.DEFAULT_CJK_FONT,
+    cjk_bold: bool = False,
 ) -> Image.Image:
     """The page for one bird, or the empty perch when there is none to draw."""
     width, height = resolution
@@ -56,12 +58,16 @@ def render_plate(
     if show_names and name:
         flat = not textured
         lines.append(
-            (text_mask(name, fonts.load(font_key, name_px), flat), round(name_px * _NAME_GAP))
+            (
+                label_mask(name, font_key, name_px, flat, cjk_font_key, cjk_bold),
+                round(name_px * _NAME_GAP),
+            )
         )
         if note:
+            note_px = round(name_px * _NOTE_SCALE)
             lines.append(
                 (
-                    text_mask(note, fonts.load(font_key, round(name_px * _NOTE_SCALE)), flat),
+                    label_mask(note, font_key, note_px, flat, cjk_font_key, cjk_bold),
                     round(name_px * _NOTE_GAP),
                 )
             )

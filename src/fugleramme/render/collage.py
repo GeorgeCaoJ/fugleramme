@@ -42,9 +42,9 @@ from .page import (
     blank,
     day_ordinal,
     draw_perch,
+    label_mask,
     label_px,
     stamp,
-    text_mask,
     trim,
 )
 from .paper import PAD, process_sprite
@@ -183,6 +183,8 @@ def _layout(
     name_px: int,
     label_text: Callable[[str], str],
     layout: str,
+    cjk_font_key: str = fonts.DEFAULT_CJK_FONT,
+    cjk_bold: bool = False,
 ):
     """Shrink the set until every bird, name included, fits, then bisect back
     toward the size that failed, for as many steps as the layout affords.
@@ -195,8 +197,12 @@ def _layout(
     def rasterize(px: int) -> tuple[list[Image.Image], int]:
         if not font_key:
             return [], 0
-        font = fonts.load(font_key, px)  # only the size is packed; the draw pass re-rasterizes
-        return [text_mask(label_text(names[i]), font, False) for i in order], round(px * 0.35)
+        # Per-label: mixed CJK/Latin strings need both faces (see fonts.faces).
+        labels = [
+            label_mask(label_text(names[i]), font_key, px, False, cjk_font_key, cjk_bold)
+            for i in order
+        ]
+        return labels, round(px * 0.35)
 
     def attempt(shrink: float):
         px = max(MIN_LABEL_PX, round(name_px * shrink)) if font_key else 0
@@ -266,6 +272,8 @@ def _placements(
     label_text: Callable[[str], str],
     layout: str,
     margin: float,
+    cjk_font_key: str = fonts.DEFAULT_CJK_FONT,
+    cjk_bold: bool = False,
 ) -> tuple[tuple[_Placed, ...], int]:
     """Pack the page, or return the cached packing. The panel and the kiosk pack
     identically - only `scale` and the paper differ - so whichever renders first
@@ -291,10 +299,14 @@ def _placements(
         alphas = [img.getchannel("A") for img in arts]
         args = (names, alphas, order, weights, flips, base, *box)
 
-        placed, used_px = _layout(*args, font_key, name_px, label_text, layout)
+        placed, used_px = _layout(
+            *args, font_key, name_px, label_text, layout, cjk_font_key, cjk_bold
+        )
         if placed is None and font_key:  # birds beat blank paper
             log.warning("No layout fits %d species with names at %dx%d", len(names), *box)
-            placed, used_px = _layout(*args, None, name_px, label_text, layout)
+            placed, used_px = _layout(
+                *args, None, name_px, label_text, layout, cjk_font_key, cjk_bold
+            )
 
         result = (
             tuple(
@@ -328,6 +340,8 @@ def render_collage(
     perches: Sequence[Path] = (),
     layout: str = packing.DEFAULT_LAYOUT,
     margin: float = DEFAULT_MARGIN,
+    cjk_font_key: str = fonts.DEFAULT_CJK_FONT,
+    cjk_bold: bool = False,
 ) -> Image.Image:
     """Composite the given (name, image) entries into a tightly packed collage.
 
@@ -359,6 +373,8 @@ def render_collage(
         width,
         height,
         font_key if show_names else None,
+        cjk_font_key if show_names else None,
+        cjk_bold if show_names else None,
         name_px,
         labels,
         layout,
@@ -376,6 +392,8 @@ def render_collage(
         label_text,
         layout,
         margin,
+        cjk_font_key,
+        cjk_bold,
     )
 
     for p in placed:
@@ -387,11 +405,12 @@ def render_collage(
     # Names last: halos feather past the collision mask, so a name drawn inline
     # with the birds would be washed over by the next neighbour.
     if used_px:
-        font = fonts.load(font_key, max(1, round(used_px * scale)))
+        px = max(1, round(used_px * scale))
         for p in placed:
             if p.label_at is None:
                 continue
-            mask = text_mask(label_text(names[p.index]), font, not textured)
+            text = label_text(names[p.index])
+            mask = label_mask(text, font_key, px, not textured, cjk_font_key, cjk_bold)
             at = _at(p.label_at, scale)
             centred = at[0] + round((p.label_w * scale - mask.width) / 2)
             stamp(canvas, mask, (centred, at[1]), textured)
