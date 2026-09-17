@@ -33,3 +33,6 @@ frame.env
 
 # Built docs site
 site/
+
+# Local demo screenshots
+demo-collage*.png

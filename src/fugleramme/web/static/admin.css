@@ -12,8 +12,19 @@ nav.tabs button { font-size: 0.95rem; padding: 0.4rem 1rem; margin: 0; cursor: p
 nav.tabs button[aria-selected="true"] { border-bottom-color: #446; font-weight: 600; color: inherit; }
 section[hidden] { display: none; }
 .cols { display: flex; gap: 2.5rem; align-items: flex-start; }
-form.settings { flex: 0 0 15rem; }
+form.settings { flex: 0 0 22rem; }
 aside.side { flex: 1; min-width: 0; }
+/* Two language columns under 鸟类名称; font panels are parked into .font-slot. */
+.lang-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0.75rem 0 0; }
+.lang-col { padding: 0.65rem 0.7rem; background: #f4f2ee; border-radius: 6px; min-width: 0; }
+.lang-col .lang-title { display: block; font-weight: 600; color: #446; margin: 0 0 0.35rem; }
+.lang-col .sub { margin-top: 0.45rem; }
+.lang-col .src { margin-top: 0.45rem; }
+.font-slot:empty { display: none; }
+.font-shared { display: block; font-size: 0.8rem; color: #666; margin: 0.5rem 0 0; }
+.font-shared[hidden] { display: none; }
+.lang-col.lang-off .font-slot,
+.lang-col.lang-off .font-shared { opacity: 0.45; }
 label { display: block; margin: 0 0 1.25rem; }
 span { display: block; font-weight: 600; margin-bottom: 0.25rem; }
 small { color: #666; font-weight: 400; }

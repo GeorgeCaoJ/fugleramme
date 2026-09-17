@@ -55,7 +55,7 @@ def test_every_slot_in_the_template_is_filled(tmp_path, source, mode):
 def test_the_page_still_fills_every_slot_with_the_detector_gone(tmp_path, source):
     page = _page(tmp_path, source(down=True))
     assert "$" not in page
-    assert "detector unreachable" in page
+    assert "检测器不可达" in page
 
 
 def test_every_asset_the_page_links_is_one_the_server_serves(tmp_path, source):
@@ -76,7 +76,7 @@ def test_a_species_with_no_artwork_is_marked_rather_than_dropped(tmp_path):
     html = admin.species_html([("Pica pica", "gould", ""), ("Corvus cornix", None, "")], name_of)
     assert html.count("<li") == 2
     assert 'class="noart"' in html and "Corvus cornix" in html
-    assert admin.species_html([], name_of) == '<li class="empty">none yet</li>'
+    assert admin.species_html([], name_of) == '<li class="empty">暂无</li>'
 
 
 def test_a_plate_with_a_citation_links_to_it(tmp_path):
@@ -88,10 +88,10 @@ def test_a_plate_with_a_citation_links_to_it(tmp_path):
 
 def test_the_update_row_offers_the_install_only_once_a_release_is_known():
     status = Status()
-    assert "Check" in admin._update(status)
+    assert "检查" in admin._update(status)
 
     status.update_available = "v9.9.9"
-    assert "Install" in admin._update(status)
+    assert "安装" in admin._update(status)
 
     status.update_available, status.updating = None, True
     assert "<progress" in admin._update(status)  # no button while it installs
@@ -100,25 +100,25 @@ def test_the_update_row_offers_the_install_only_once_a_release_is_known():
 def test_the_detector_row_carries_the_version_it_reports():
     """The version has to survive a detector that answers without one."""
     assert "20260823" in admin._detector("ok", "20260823", True)
-    assert admin._detector("ok", "", True) == admin._state(True, "running", "unreachable")
-    assert "unreachable" in admin._detector("down", "", False)
+    assert admin._detector("ok", "", True) == admin._state(True, "运行中", "不可达")
+    assert "不可达" in admin._detector("down", "", False)
 
 
 def test_the_detector_row_says_a_password_is_wanted_rather_than_unreachable():
     # PrivateMode with no password: /health is gated, and the page read nothing.
     row = admin._detector("auth", "", False)
-    assert row == '<span class="bad">running · needs a password</span>'
+    assert row == '<span class="bad">运行中 · 需要密码</span>'
 
     # Only the settings gated: /health answers, and the locale list is what did not.
     row = admin._detector("ok", "20260823", True, NEEDS_PASSWORD)
-    assert row == '<span class="warn">running · 20260823 · needs a password</span>'
-    assert "needs a password" not in admin._detector("ok", "20260823", True)
+    assert row == '<span class="warn">运行中 · 20260823 · 需要密码</span>'
+    assert "需要密码" not in admin._detector("ok", "20260823", True)
 
 
 def test_a_working_password_is_not_reported_as_a_missing_one():
     """/health is asked without credentials, so PrivateMode answers 401 to every
     frame alike - the ones holding a working password included."""
-    assert admin._detector("auth", "", True) == '<span class="ok">running</span>'
+    assert admin._detector("auth", "", True) == '<span class="ok">运行中</span>'
 
 
 def test_the_credentials_fold_away_until_there_is_one_to_show(tmp_path, source):
@@ -220,19 +220,19 @@ def test_the_connection_test_answers_in_the_status_row_s_words_too(detector):
     and the page renders the same words on load."""
     url, httpd = detector(password="hunter2")
     settings = Settings(detector_url=url, detector_password="hunter2")
-    assert admin.connection({}, settings)["status"] == admin._state(True, "running", "unreachable")
+    assert admin.connection({}, settings)["status"] == admin._state(True, "运行中", "不可达")
 
     bad = admin.connection({"detector_password": ["wrong"]}, settings)
-    assert bad["status"] == f'<span class="bad">running · {NEEDS_PASSWORD}</span>'
+    assert bad["status"] == '<span class="bad">运行中 · 需要密码</span>'
     # PrivateMode gates /health too, so a page that read nothing reaches the same
     # answer - with no version, since that is what /health would have carried.
     assert admin._detector(*admin.hostinfo.detector(url), False) == (
-        f'<span class="bad">running · {NEEDS_PASSWORD}</span>'
+        '<span class="bad">运行中 · 需要密码</span>'
     )
 
     httpd.shutdown()
     httpd.server_close()
-    assert admin.connection({}, settings)["status"] == '<span class="bad">unreachable</span>'
+    assert admin.connection({}, settings)["status"] == '<span class="bad">不可达</span>'
 
 
 def test_the_connection_test_catches_a_detector_that_only_gates_the_names(detector):
@@ -245,9 +245,9 @@ def test_the_connection_test_catches_a_detector_that_only_gates_the_names(detect
 
     answer = admin.connection({}, settings)
     assert answer["state"] == "names"
-    assert answer["text"] == "connected · needs a password"
+    assert answer["text"] == "已连接 · 需要密码"
     # The detector itself is running, and the row is about the detector.
-    assert answer["status"] == '<span class="warn">running · needs a password</span>'
+    assert answer["status"] == '<span class="warn">运行中 · 需要密码</span>'
 
     assert admin.connection({"detector_password": ["hunter2"]}, settings)["state"] == "ok"
 
@@ -262,7 +262,7 @@ def test_the_names_field_says_why_it_has_only_the_scientific_name(tmp_path, sour
     monkeypatch.setattr(admin, "catalog_failure", lambda: "needs a password")
     page = _page(tmp_path, source())
 
-    assert "No languages: needs a password." in page
+    assert "无可用语言：需要密码" in page
     # The fix is on the other tab, so the note carries the reader there.
     assert '<a href="#detector" data-tab="system">' in page
 
@@ -275,6 +275,6 @@ def test_the_display_tab_names_the_password_rather_than_calling_it_unreachable(t
     languages.use(private)  # as the service wires it, so the names note agrees
     page = _page(tmp_path, private, detector_url=private.base_url)
 
-    assert "detector unreachable" not in page
-    assert f'<li class="problem">detector {NEEDS_PASSWORD}. See <a href="#detector"' in page
-    assert f"<dd>detector {NEEDS_PASSWORD}</dd>" in page  # beside the row that says it too
+    assert "检测器不可达" not in page
+    assert '<li class="problem">需要密码。请到 <a href="#detector"' in page
+    assert "<dd>需要密码</dd>" in page  # beside the row that says it too

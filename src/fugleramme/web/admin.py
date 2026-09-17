@@ -21,7 +21,7 @@ from ..languages import NONE, Namer, catalog, catalog_failure, ordered
 from ..modes import MODES
 from ..names import available_styles, image_for, origin_of, source_of
 from ..render.collage import NO_LIMIT, RANKINGS
-from ..render.fonts import FONTS, LABEL_SIZES
+from ..render.fonts import CJK_FONTS, FONTS, LABEL_SIZES
 from ..render.packing import LAYOUTS
 from ..settings import (
     DEFAULT_LIMIT,
@@ -36,7 +36,7 @@ from ..settings import (
 )
 from ..source import NEEDS_PASSWORD, Unavailable
 from ..status import Status
-from . import STATIC_DIR, hostinfo
+from . import STATIC_DIR, hostinfo, zh
 
 CHECKBOXES = "checkboxes"  # hidden field naming the checkboxes a form carries
 
@@ -46,7 +46,7 @@ PASSWORD_SET = "\u2022" * 8
 
 _LOOPBACK = ("127.0.0.1", "localhost", "::1", "0.0.0.0")
 
-_ASPECT = {0: "(landscape)", 90: "(portrait)"}
+_ASPECT = zh.ASPECT
 
 # Style and plate names that don't title-case into something readable.
 _NAMES = {
@@ -127,14 +127,15 @@ def _state(ok: bool, good: str, bad: str) -> str:
 def _fix(problem: str) -> str:
     """A problem and the tab that fixes it, worded the same wherever it turns up."""
     return (
-        f'{html.escape(problem)}. See <a href="#detector" data-tab="system">System → Detector</a>.'
+        f'{html.escape(zh.failure(problem))}。'
+        f'请到 <a href="#detector" data-tab="system">系统 → 检测器</a> 查看。'
     )
 
 
 def _outage(state: str) -> str:
     """What to show where a bird would have been. Only a refusal names the
     password; anything else reads as unreachable, which is what the page saw."""
-    return f"detector {NEEDS_PASSWORD}" if state == "auth" else "detector unreachable"
+    return zh.FAILURES[NEEDS_PASSWORD] if state == "auth" else zh.FAILURES["detector unreachable"]
 
 
 def _detector(state: str, version: str, reading: bool, names_failure: str = "") -> str:
@@ -151,11 +152,11 @@ def _detector(state: str, version: str, reading: bool, names_failure: str = "") 
     """
     if not reading:
         if state == "auth":
-            return f'<span class="bad">running · {NEEDS_PASSWORD}</span>'
-        return '<span class="bad">unreachable</span>'
-    running = "running" + (f" · {version}" if version else "")
+            return f'<span class="bad">运行中 · {zh.FAILURES[NEEDS_PASSWORD]}</span>'
+        return '<span class="bad">不可达</span>'
+    running = "运行中" + (f" · {version}" if version else "")
     if names_failure == NEEDS_PASSWORD:  # the settings only: birds yes, names no
-        return f'<span class="warn">{running} · {NEEDS_PASSWORD}</span>'
+        return f'<span class="warn">{running} · {zh.FAILURES[NEEDS_PASSWORD]}</span>'
     return f'<span class="ok">{running}</span>'
 
 
@@ -163,10 +164,10 @@ def _detector(state: str, version: str, reading: bool, names_failure: str = "") 
 # The row comes from `_detector`, so the test and a page load cannot describe one
 # detector differently. "auth" leads with nothing: the detail is the whole answer.
 _ANSWERS = {
-    "ok": ("connected", _detector("ok", "", reading=True)),
+    "ok": ("已连接", _detector("ok", "", reading=True)),
     "auth": ("", _detector("auth", "", reading=False)),
-    "names": ("connected", _detector("ok", "", reading=True, names_failure=NEEDS_PASSWORD)),
-    "unreachable": ("unreachable", _detector("down", "", reading=False)),
+    "names": ("已连接", _detector("ok", "", reading=True, names_failure=NEEDS_PASSWORD)),
+    "unreachable": ("不可达", _detector("down", "", reading=False)),
 }
 
 
@@ -191,7 +192,7 @@ def _species_li(name: str, source: str | None, url: str) -> str:
     # Marks species counted in the window but omitted from the collage (#9); else
     # names the plate the artwork was cut from, per the style's manifest.
     if source is None:
-        return f'<li class="noart">{name} <small>no art</small></li>'
+        return f'<li class="noart">{name} <small>无插画</small></li>'
     plate = _display_name(source)
     if url:
         plate = f'<a href="{html.escape(url)}" target="_blank" rel="noopener">{plate}</a>'
@@ -201,7 +202,7 @@ def _species_li(name: str, source: str | None, url: str) -> str:
 def species_html(species: list[tuple[str, str | None, str]], name_of: Namer) -> str:
     return (
         "".join(_species_li(name_of.inline(name), source, url) for name, source, url in species)
-        or '<li class="empty">none yet</li>'
+        or '<li class="empty">暂无</li>'
     )
 
 
@@ -211,10 +212,10 @@ def _language_select(
     """A language dropdown, BirdNET-Go's offering in preference order. A saved code
     it is not serving stays selectable, so an outage cannot quietly reset the
     frame's language on the next Save."""
-    items = [(NONE, "None")] if optional else []
-    items += [(code, name) for code, name in languages if code != NONE]
+    items = [(NONE, zh.language_name(NONE))] if optional else []
+    items += [(code, zh.language_name(code, name)) for code, name in languages if code != NONE]
     if selected not in dict(items):
-        items.append((selected, f"{selected} (unavailable)"))
+        items.append((selected, f"{zh.language_name(selected, selected)}（不可用）"))
     labels = dict(items)
     codes = [code for code, _ in items]
     return f'<select name="{field}">{_options(codes, selected, labels.get)}</select>'
@@ -224,54 +225,86 @@ def _update(status: Status) -> str:
     # `requested` counts as installing: the loop only picks it up a tick later.
     if status.updating or status.update_requested:
         # A phase with no percent leaves the bar valueless, which renders indeterminate.
-        label, value = status.update_phase or "installing…", ""
+        label, value = status.update_phase or "正在安装…", ""
         if status.update_percent is not None:
             label, value = f"{label} {status.update_percent}%", f' value="{status.update_percent}"'
         return f'<span id="phase">{label}</span><progress id="bar" max="100"{value}></progress>'
     if status.update_error:
-        return f'<span class="bad">{status.update_error}</span>{_action("check", "Retry")}'
+        return f'<span class="bad">{status.update_error}</span>{_action("check", "重试")}'
     if status.update_available:
         # The command stands in for the button: the image is the host's to replace.
         install = (
             f'·<pre class="cmd">{html.escape(updates.CONTAINER_COMMAND)}</pre>'
             if updates.in_container()
-            else _action("update", "Install")
+            else _action("update", "安装")
         )
-        return f'<span class="warn">{status.update_available} available</span>{install}'
-    return f'<span id="state">up to date</span>{_action("check", "Check")}'
+        return f'<span class="warn">{status.update_available} 可用</span>{install}'
+    return f'<span id="state">已是最新</span>{_action("check", "检查")}'
 
 
 def _auto_update(settings: Settings) -> str:
     """The auto-install toggle, shown disabled in a container: nothing in here can
     pull an image, and a switch that does nothing is worse than no switch."""
     if updates.in_container():
-        label = "Install new releases automatically <small>· disabled in container mode</small>"
+        label = "自动安装新版本 <small>· 容器模式下不可用</small>"
         return f'<div class="block off">{_checkbox("auto_update", label, False, True)}</div>'
     return (
         '<form class="block" method="post" action="/admin">'
         f'<input type="hidden" name="{CHECKBOXES}" value="auto_update">'
-        f"{_checkbox('auto_update', 'Install new releases automatically', settings.auto_update)}"
-        '<button type="submit">Save</button></form>'
+        f"{_checkbox('auto_update', '自动安装新版本', settings.auto_update)}"
+        '<button type="submit">保存</button></form>'
     )
 
 
 def _names_field(settings: Settings, languages: list[tuple[str, str]], failure: str) -> str:
-    """The names block. `failure` says why the menu holds nothing but the
-    scientific name, so a detector that will not serve its locale list reads as
-    one to fix rather than as all the frame can do."""
-    note = f'<p class="note bad">{_fix(f"No languages: {failure}")}</p>' if failure else ""
-    return (
-        f'<div class="field"><span>Species names</span>'
-        f"{_checkbox('show_names', 'Display bird names', settings.show_names)}"
-        f"{note}"
-        f'<label class="sub"><small>Language</small>'
-        f"{_language_select('primary_language', languages, settings.primary_language)}</label>"
-        f'<label class="sub"><small>Second language (optional)</small>'
-        f"{_language_select('secondary_language', languages, settings.secondary_language, optional=True)}</label>"
-        f'<label class="sub"><small>Typeface</small><select name="label_font">'
+    """The names block as two language columns. Each column holds its language
+    pick; font controls are moved into the column that needs them by admin.js."""
+    note = (
+        f'<p class="note bad">{_fix(f"无可用语言：{zh.failure(failure)}")}</p>'
+        if failure
+        else ""
+    )
+    western = (
+        f'<div class="font-panel" id="font-western" data-script="western">'
+        f'<label class="sub"><small>西文字体</small>'
+        f'<select name="label_font">'
         f"{_options(FONTS, settings.label_font, lambda k: FONTS[k][0])}</select></label>"
-        f'<label class="sub"><small>Text size</small><select name="label_size">'
-        f"{_options(LABEL_SIZES, settings.label_size, lambda k: LABEL_SIZES[k][0])}</select></label>"
+        f"</div>"
+    )
+    chinese = (
+        f'<div class="font-panel" id="font-cjk" data-script="cjk">'
+        f'<label class="sub"><small>中文字体</small>'
+        f'<select name="cjk_font">'
+        f"{_options(CJK_FONTS, settings.cjk_font, lambda k: CJK_FONTS[k][0])}</select></label>"
+        f"{_checkbox('cjk_bold', '加粗', settings.cjk_bold)}"
+        f"</div>"
+    )
+    shared = (
+        f'<p class="font-shared" id="font-western-shared" hidden>'
+        f"第二语言与主语言共用西文字体</p>"
+    )
+    return (
+        f'<div class="field" id="names"><span>鸟类名称</span>'
+        f"{_checkbox('show_names', '显示鸟名', settings.show_names)}"
+        f"{note}"
+        f'<div class="lang-cols">'
+        f'<div class="lang-col" id="lang-primary" data-slot="primary">'
+        f'<small class="lang-title">主语言</small>'
+        f'<label class="sub">'
+        f"{_language_select('primary_language', languages, settings.primary_language)}</label>"
+        f'<div class="font-slot"></div>'
+        f"</div>"
+        f'<div class="lang-col" id="lang-secondary" data-slot="secondary">'
+        f'<small class="lang-title">第二语言</small>'
+        f'<label class="sub">'
+        f"{_language_select('secondary_language', languages, settings.secondary_language, optional=True)}</label>"
+        f'<div class="font-slot"></div>'
+        f"{shared}"
+        f"</div>"
+        f"</div>"
+        f'<div id="font-dock" hidden>{western}{chinese}</div>'
+        f'<label class="sub"><small>字号</small><select name="label_size">'
+        f"{_options(LABEL_SIZES, settings.label_size, lambda k: zh.LABEL_SIZES.get(k, LABEL_SIZES[k][0]))}</select></label>"
         f"</div>"
     )
 
@@ -292,12 +325,12 @@ def _detector_field(settings: Settings) -> str:
     sets `detector_username` in settings.json instead.
     """
     return (
-        _text_field("detector_url", "Address", settings.detector_url, "url")
+        _text_field("detector_url", "地址", settings.detector_url, "url")
         + f'<details id="credentials"{" open" if settings.detector_password else ""}>'
-        + "<summary>Credentials <small>(Basic Authentication)</small></summary>"
+        + "<summary>凭证 <small>（Basic Authentication）</small></summary>"
         + _text_field(
             "detector_password",
-            "Password",
+            "密码",
             PASSWORD_SET if settings.detector_password else "",
             "password",
         )
@@ -326,21 +359,21 @@ def connection(form: dict[str, list[str]], settings: Settings) -> dict:
     lead, row = _ANSWERS[state]
     return {
         "state": state,
-        "text": " · ".join(part for part in (lead, detail) if part),
+        "text": " · ".join(part for part in (lead, zh.failure(detail) if detail else "") if part),
         "status": row,
     }
 
 
 def _lookbacks(settings: Settings) -> str:
     # A hand-edited non-preset value stays selectable so Save doesn't drop it.
-    labels = dict(LOOKBACK_OPTIONS)
-    labels.setdefault(settings.lookback_hours, f"{settings.lookback_hours} hours")
+    labels = {hours: zh.lookback_hours(hours) for hours, _ in LOOKBACK_OPTIONS}
+    labels.setdefault(settings.lookback_hours, zh.lookback_hours(settings.lookback_hours))
     return _options(sorted(labels, key=lookback_order), settings.lookback_hours, labels.get)
 
 
 def _refreshes(settings: Settings) -> str:
-    labels = dict(REFRESH_OPTIONS)
-    labels.setdefault(settings.refresh_minutes, f"At most every {settings.refresh_minutes} minutes")
+    labels = {minutes: zh.refresh_minutes(minutes) for minutes, _ in REFRESH_OPTIONS}
+    labels.setdefault(settings.refresh_minutes, zh.refresh_minutes(settings.refresh_minutes))
     return _options(sorted(labels), settings.refresh_minutes, labels.get)
 
 
@@ -360,19 +393,20 @@ def _species_field(settings: Settings) -> str:
     """
     limited = settings.species_limit != NO_LIMIT
     count = settings.species_limit if limited else DEFAULT_LIMIT
+    ranking = [(key, zh.RANKINGS.get(key, label)) for key, label in RANKINGS.items()]
     return (
         f'<div class="field" id="limit">'
-        f"<span>Species on the page "
-        f"{_hint(f'More than {DEFAULT_LIMIT} make the page very crowded')}</span>"
+        f"<span>画面上的物种 "
+        f"{_hint(f'超过 {DEFAULT_LIMIT} 种会显得很拥挤')}</span>"
         f'<div class="src"><label class="src"><input type="radio" name="limit_mode"'
-        f' value="some"{" checked" if limited else ""}> At most</label>'
+        f' value="some"{" checked" if limited else ""}> 最多</label>'
         f'<input type="number" name="species_limit" min="1" max="{LIMIT_CEILING}"'
         f' value="{count}"{"" if limited else " disabled"}'
-        f' aria-label="How many species"></div>'
+        f' aria-label="物种数量"></div>'
         f'<label class="src"><input type="radio" name="limit_mode" value="all"'
-        f"{'' if limited else ' checked'}> Show all</label>"
-        f'<div class="sub" id="ranking"><small>Which ones to keep</small>'
-        f"{_radios('ranking', list(RANKINGS.items()), settings.ranking)}</div>"
+        f"{'' if limited else ' checked'}> 全部显示</label>"
+        f'<div class="sub" id="ranking"><small>保留哪些</small>'
+        f"{_radios('ranking', ranking, settings.ranking)}</div>"
         f"</div>"
     )
 
@@ -387,9 +421,16 @@ def _radio_field(
 def _layout_field(settings: Settings) -> str:
     """How the collage packs its birds (#47). Dimmed with the lookback for the
     modes that draw one bird."""
-    hint = "\n\n".join(f"{layout.label}: {layout.blurb}" for layout in LAYOUTS.values())
-    options = [(k, layout.label) for k, layout in LAYOUTS.items()]
-    return _radio_field(f"Layout {_hint(hint)}", "layout", options, settings.layout, id="layout")
+    hint = "\n\n".join(
+        f"{zh.LAYOUTS.get(key, (layout.label, layout.blurb))[0]}："
+        f"{zh.LAYOUTS.get(key, (layout.label, layout.blurb))[1]}"
+        for key, layout in LAYOUTS.items()
+    )
+    options = [
+        (key, zh.LAYOUTS.get(key, (layout.label, layout.blurb))[0])
+        for key, layout in LAYOUTS.items()
+    ]
+    return _radio_field(f"布局 {_hint(hint)}", "layout", options, settings.layout, id="layout")
 
 
 def page(
@@ -415,9 +456,9 @@ def page(
         latest, rows = None, None
     windowed = modes.mode_of(settings.mode).windowed
     online, iface = hostinfo.online()
-    rendered = _stamp(status.rendered_at) if status.rendered_at else "not yet"
+    rendered = _stamp(status.rendered_at) if status.rendered_at else "尚未渲染"
     if status.push_error:
-        rendered += f" · panel push failing ({status.push_error})"
+        rendered += f" · 墨水屏推送失败（{status.push_error}）"
     w, h = settings.web_size(panel_size)
     glass = f"{panel_size[0]}×{panel_size[1]}"
     birdnet_url, birdnet_port = birdnet_link(settings.detector_url)
@@ -435,7 +476,10 @@ def page(
             }
         ),
         mode_field=_radio_field(
-            "Mode", "mode", [(k, m.label) for k, m in MODES.items()], settings.mode
+            "模式",
+            "mode",
+            [(k, zh.MODES.get(k, m.label)) for k, m in MODES.items()],
+            settings.mode,
         ),
         resolutions=_options(
             WEB_HEIGHTS,
@@ -455,7 +499,7 @@ def page(
         layout_field=_layout_field(settings),
         names_field=_names_field(settings, languages, names_failure),
         style_field=_radio_field(
-            "Artwork style",
+            "插画风格",
             "style",
             [(s, _display_name(s)) for s in available_styles(ctx.images_dir)],
             ctx.style,
@@ -468,11 +512,11 @@ def page(
         ),
         update=_update(status),
         auto_update=_auto_update(settings),
-        panel=f"detected · {glass}" if detected else f"not detected · assuming {glass}",
+        panel=f"已检测到 · {glass}" if detected else f"未检测到 · 假定 {glass}",
         birdnet=_detector(detector_state, detector_version, rows is not None, names_failure),
         detector_field=_detector_field(settings),
         host=hostinfo.lan_address(updates.in_container()),
-        online=_state(online, "online", "offline") + (f" · {iface}" if iface else ""),
+        online=_state(online, "在线", "离线") + (f" · {iface}" if iface else ""),
         disk=hostinfo.disk_free(names_dir),
         started=_stamp(status.started_at),
         kiosk_size=f"{w}×{h}",
@@ -480,6 +524,6 @@ def page(
         latest=(
             f"{ctx.namer.inline(latest.scientific_name)} · {_stamp(latest.detected_at)}"
             if latest
-            else ("none yet" if rows is not None else _outage(detector_state))
+            else ("暂无" if rows is not None else _outage(detector_state))
         ),
     )

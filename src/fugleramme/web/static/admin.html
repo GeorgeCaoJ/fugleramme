@@ -1,82 +1,82 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fugleramme admin</title>
+<title>Fugleramme 管理</title>
 <link rel="stylesheet" href="/admin.css?v=$version">
 </head>
 <body>
 <header>
   <h1>Fugleramme</h1>
-  <nav><a href="/">Kiosk</a><a id="birdnet" href="#" title="detection &amp; stats">BirdNET-Go</a><a href="$docs_url" target="_blank" rel="noopener">Docs</a></nav>
+  <nav><a href="/">展示页</a><a id="birdnet" href="#" title="检测与统计">BirdNET-Go</a><a href="$docs_url" target="_blank" rel="noopener">文档</a></nav>
 </header>
 <nav class="tabs" role="tablist">
-  <button type="button" role="tab" data-tab="settings">Display</button>
-  <button type="button" role="tab" data-tab="system">System</button>
+  <button type="button" role="tab" data-tab="settings">显示</button>
+  <button type="button" role="tab" data-tab="system">系统</button>
 </nav>
 <section id="tab-settings" class="cols">
   <form class="settings" method="post" action="/admin">
-    <input type="hidden" name="$checkboxes" value="show_names">
+    <input type="hidden" name="$checkboxes" value="show_names cjk_bold">
     $mode_field
-    <label><span>Resolution <span class="hint" tabindex="0" role="img" aria-label="Web view only"></span></span>
+    <label><span>分辨率 <span class="hint" tabindex="0" role="img" aria-label="仅影响网页预览"></span></span>
       <select name="web_resolution">$resolutions</select></label>
-    <label><span>Rotation <span class="hint" tabindex="0" role="img" aria-label="How the frame hangs"></span></span>
+    <label><span>旋转 <span class="hint" tabindex="0" role="img" aria-label="相框悬挂方向"></span></span>
       <select name="rotation">$rotations</select></label>
-    <label><span>Margin <small id="margin-value">$margin%</small> <span class="hint" tabindex="0" role="img" aria-label="Space kept clear at the edges, for a mat that overlaps the panel"></span></span>
+    <label><span>边距 <small id="margin-value">$margin%</small> <span class="hint" tabindex="0" role="img" aria-label="为压在屏幕上的卡纸留出空白边"></span></span>
       <input type="range" name="margin" min="0" max="$margin_max" step="1" value="$margin"></label>
-    <label><span>Panel refresh <span class="hint" tabindex="0" role="img" aria-label="How long the panel holds a page before new birds may change it"></span></span>
+    <label><span>墨水屏刷新 <span class="hint" tabindex="0" role="img" aria-label="画面至少保持多久后，才允许因新鸟而重绘"></span></span>
       <select name="refresh_minutes">$refreshes</select></label>
     <label id="lookback"$lookback_off>
-      <span>Lookback window <span class="hint" tabindex="0" role="img" aria-label="How far back the frame looks"></span></span>
+      <span>回看窗口 <span class="hint" tabindex="0" role="img" aria-label="相框向前看多久"></span></span>
       <select name="lookback_hours"$lookback_disabled>$lookbacks</select></label>
     $limit_field
     $layout_field
     $names_field
     $style_field
-    <button type="submit">Save</button>
+    <button type="submit">保存</button>
   </form>
   <aside class="side">
-    <h2>Preview</h2>
+    <h2>预览</h2>
     <div class="preview loading" id="preview">
-      <p class="rendering"><span class="spinner"></span> Rendering…</p>
-      <img id="shot" alt="Current page">
+      <p class="rendering"><span class="spinner"></span> 正在渲染…</p>
+      <img id="shot" alt="当前画面">
       <div class="mat" id="mat" hidden></div>
     </div>
-    <h2>On the page (<span id="count">$species_count</span>)</h2>
+    <h2>画面上的鸟（<span id="count">$species_count</span>）</h2>
     <ul class="species" id="species">$species_rows</ul>
   </aside>
 </section>
 <section id="tab-system" hidden>
-  <h2>Updates</h2>
+  <h2>更新</h2>
   <dl class="status">
-    <dt>Version</dt><dd>v$version</dd>
-    <dt>Update</dt><dd class="update">$update</dd>
+    <dt>版本</dt><dd>v$version</dd>
+    <dt>更新</dt><dd class="update">$update</dd>
   </dl>
   $auto_update
-  <h2>Detector</h2>
+  <h2>检测器</h2>
   <dl class="status">
     <dt>BirdNET-Go</dt><dd id="detector-state">$birdnet</dd>
   </dl>
   <form class="block detector" id="detector" method="post" action="/admin">
     $detector_field
-    <button type="submit">Save</button>
-    <button type="button" id="test">Test connection</button>
+    <button type="submit">保存</button>
+    <button type="button" id="test">测试连接</button>
     <span id="test-result"></span>
   </form>
-  <h2>System</h2>
+  <h2>系统</h2>
   <dl class="status">
-    <dt>Inky panel</dt><dd>$panel</dd>
-    <dt>Host</dt><dd>$host</dd>
-    <dt>Internet</dt><dd>$online</dd>
-    <dt>Disk</dt><dd>$disk</dd>
-    <dt>Started</dt><dd>$started</dd>
-    <dt>Kiosk render</dt><dd>$kiosk_size</dd>
+    <dt>Inky 墨水屏</dt><dd>$panel</dd>
+    <dt>主机</dt><dd>$host</dd>
+    <dt>网络</dt><dd>$online</dd>
+    <dt>磁盘</dt><dd>$disk</dd>
+    <dt>启动时间</dt><dd>$started</dd>
+    <dt>展示页分辨率</dt><dd>$kiosk_size</dd>
   </dl>
-  <h2>Activity</h2>
+  <h2>活动</h2>
   <dl class="status">
-    <dt>Last render</dt><dd>$rendered</dd>
-    <dt>Last detection</dt><dd>$latest</dd>
+    <dt>上次渲染</dt><dd>$rendered</dd>
+    <dt>最近检测</dt><dd>$latest</dd>
   </dl>
 </section>
 <script id="config" type="application/json">$config</script>

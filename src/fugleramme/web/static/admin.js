@@ -24,7 +24,7 @@ sessionStorage.removeItem("scroll");
 const was = sessionStorage.getItem("version");
 const state = document.getElementById("state");
 sessionStorage.setItem("version", cfg.version);
-if (state && was && was !== cfg.version) state.textContent = "updated to v" + cfg.version;
+if (state && was && was !== cfg.version) state.textContent = "已更新至 v" + cfg.version;
 
 const tabs = document.querySelectorAll("nav.tabs button");
 function showTab(name) {
@@ -109,7 +109,7 @@ if (test) {
   test.addEventListener("click", async () => {
     test.disabled = true;
     outcome.className = "";
-    outcome.textContent = "testing…";
+    outcome.textContent = "测试中…";
     try {
       const body = new URLSearchParams(new FormData(detectorForm));
       const answer = await fetch("/detector", {method: "POST", body});
@@ -124,7 +124,7 @@ if (test) {
       if (!changed.get(detectorForm)()) row.innerHTML = result.status;
     } catch (e) {
       outcome.className = "bad";
-      outcome.textContent = "the frame did not answer";
+      outcome.textContent = "服务未响应";
     }
     test.disabled = false;
   });
@@ -161,7 +161,7 @@ function loadPreview() {
   };
   next.onerror = () => {
     if (id !== seq) return;
-    caption.textContent = "Preview unavailable";
+    caption.textContent = "预览不可用";
   };
   next.src = "/preview.png?" + query;
   loadSpecies(query, id);
@@ -211,15 +211,51 @@ function syncMode() {
   dim(ranking, on && capped);
 }
 
+// Park western / Chinese font panels into the language column that needs them.
+const fontWestern = document.getElementById("font-western");
+const fontCjk = document.getElementById("font-cjk");
+const fontDock = document.getElementById("font-dock");
+const fontShared = document.getElementById("font-western-shared");
+const primaryCol = document.getElementById("lang-primary");
+const secondaryCol = document.getElementById("lang-secondary");
+function scriptOf(code) {
+  if (!code) return "none";
+  return code === "zh" ? "cjk" : "western";
+}
+function syncLangFonts() {
+  if (!fontWestern || !primaryCol) return;
+  const primary = form.primary_language.value;
+  const secondary = form.secondary_language.value;
+  const pScript = scriptOf(primary);
+  const sScript = scriptOf(secondary);
+  const pSlot = primaryCol.querySelector(".font-slot");
+  const sSlot = secondaryCol.querySelector(".font-slot");
+  fontDock.append(fontWestern, fontCjk);
+  fontShared.hidden = true;
+  if (pScript === "cjk") pSlot.append(fontCjk);
+  else if (pScript === "western") pSlot.append(fontWestern);
+  // Keep the language <select> usable even when the column has no second language;
+  // only the font area reads as inactive.
+  secondaryCol.classList.toggle("lang-off", sScript === "none");
+  if (sScript === "cjk") {
+    if (pScript !== "cjk") sSlot.append(fontCjk);
+  } else if (sScript === "western") {
+    if (pScript !== "western") sSlot.append(fontWestern);
+    else fontShared.hidden = false;
+  }
+}
+
 // Capture, so a mode change settles which fields still submit before the shared
 // dirty check reads them - a round trip back to the saved mode is not a change.
 form.addEventListener("input", (e) => {
   syncMode();
+  syncLangFonts();
   if (e.target === margin) return clearTimeout(timer);  // a drag renders on release only
   queueRender();
 }, true);
 
 syncMode();
+syncLangFonts();
 
 // Save stays disabled until a form differs from what the server served. An
 // untouched password placeholder serializes the same both times, so it needs no
