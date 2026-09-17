@@ -24,3 +24,15 @@ All were taken from the [Google Fonts](https://github.com/google/fonts)
 distribution. Only the italic is vendored - a scientific name is set in italic -
 and five of the six are variable fonts, instantiated at weight 400 by
 `fonts.py`.
+
+## Chinese faces
+
+| Directory | Family | Admin label | Licence | Upstream |
+| --- | --- | --- | --- | --- |
+| `notoserifcjk/` | Noto Serif CJK SC (Regular + Bold) | 思源宋体 | OFL 1.1 | [Google Fonts / Adobe](https://github.com/notofonts/noto-cjk) |
+| `lxgwwenkai/` | LXGW WenKai (Regular + Medium) | 霞鹜文楷 | OFL 1.1 | [lxgw/LxgwWenKai](https://github.com/lxgw/LxgwWenKai) |
+| `droidsansfallback/` | Droid Sans Fallback | (fallback) | Apache 2.0 | [Android Open Source Project](https://android.googlesource.com/platform/frameworks/base/) |
+
+Chinese labels use 思源宋体 by default (or 霞鹜文楷 when chosen). The Latin
+italics above have no ideographs; Droid Sans Fallback is only a last resort if
+both Chinese faces are missing.
